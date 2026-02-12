@@ -581,9 +581,11 @@ function ReminderCard({ item, onOpen, rightBadge }) {
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
             <PriorityPill p={item.priority} />
             <View style={{ width: 8 }} />
-            <Text style={{ color: T.mut, fontWeight: "700", fontSize: 12 }}>
-              From {item.source || "Me"}
-            </Text>
+            {item.source && item.source !== "Me" ? (
+              <Text style={{ color: T.mut, fontWeight: "700", fontSize: 12 }}>
+                From {item.source}
+              </Text>
+            ) : null}
             {item.pinned ? (
               <Text style={{ color: T.ink, fontWeight: "900", marginLeft: 10 }}>★</Text>
             ) : null}
@@ -654,8 +656,12 @@ function DetailSheet({
 
         <View style={{ flexDirection: "row", alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
           <PriorityPill p={item.priority} />
-          <View style={{ width: 10 }} />
-          <Text style={{ color: T.mut, fontWeight: "800" }}>From {item.source || "Me"}</Text>
+          {item.source && item.source !== "Me" ? (
+            <>
+              <View style={{ width: 10 }} />
+              <Text style={{ color: T.mut, fontWeight: "800" }}>From {item.source}</Text>
+            </>
+          ) : null}
         </View>
 
         {!!item.tags?.length ? (
@@ -716,6 +722,7 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
   const [tagsText, setTagsText] = useState((initial?.tags || []).join(", "));
   const [priority, setPriority] = useState(initial?.priority || "med");
   const [source, setSource] = useState(initial?.source || "Me");
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -725,6 +732,7 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
     setTagsText((initial?.tags || []).join(", "));
     setPriority(initial?.priority || "med");
     setSource(initial?.source || "Me");
+    setShowDetails(!!(initial?.body?.trim() || initial?.tags?.length || (initial?.source && initial.source !== "Me")));
   }, [visible, initial]);
 
   const templates = useMemo(
@@ -767,7 +775,7 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
             }}
           >
             <TextInput
-              placeholder="A truth you don’t want to forget…"
+              placeholder="A truth you don't want to forget…"
               placeholderTextColor={T.mut}
               value={title}
               onChangeText={setTitle}
@@ -779,45 +787,94 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
               }}
               returnKeyType="next"
             />
-            <View style={{ height: 1, backgroundColor: T.div, marginVertical: 10 }} />
-            <TextInput
-              placeholder="Optional body… (keep it one sentence if you can)"
-              placeholderTextColor={T.mut}
-              value={body}
-              onChangeText={setBody}
-              multiline
-              style={{
-                color: T.sub,
-                fontSize: 15,
-                lineHeight: 21,
-                minHeight: 92,
-                paddingVertical: 8,
-              }}
-            />
           </View>
 
-          <View style={{ height: 12 }} />
+          <View style={{ height: 10 }} />
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Priority</Text>
-              <Segmented
-                value={priority}
-                onChange={setPriority}
-                options={[
-                  { value: "low", label: "Low" },
-                  { value: "med", label: "Med" },
-                  { value: "high", label: "High" },
-                ]}
-              />
-            </View>
-          </View>
+          <Pressable
+            onPress={() => setShowDetails((v) => !v)}
+            style={{ flexDirection: "row", alignItems: "center", paddingVertical: 6 }}
+          >
+            <Text style={{ color: T.sub, fontWeight: "900", fontSize: 13 }}>
+              {showDetails ? "▾ Hide details" : "▸ Add details (body, tags, priority…)"}
+            </Text>
+          </Pressable>
 
-          <View style={{ height: 12 }} />
+          {showDetails ? (
+            <>
+              <View style={{ height: 8 }} />
 
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>From someone</Text>
+              <View
+                style={{
+                  backgroundColor: T.crd,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: T.cbd,
+                  padding: 14,
+                }}
+              >
+                <TextInput
+                  placeholder="Optional body… (keep it one sentence if you can)"
+                  placeholderTextColor={T.mut}
+                  value={body}
+                  onChangeText={setBody}
+                  multiline
+                  style={{
+                    color: T.sub,
+                    fontSize: 15,
+                    lineHeight: 21,
+                    minHeight: 72,
+                    paddingVertical: 8,
+                  }}
+                />
+              </View>
+
+              <View style={{ height: 12 }} />
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Priority</Text>
+                  <Segmented
+                    value={priority}
+                    onChange={setPriority}
+                    options={[
+                      { value: "low", label: "Low" },
+                      { value: "med", label: "Med" },
+                      { value: "high", label: "High" },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <View style={{ height: 12 }} />
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>From someone</Text>
+                  <View
+                    style={{
+                      backgroundColor: T.crd,
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: T.cbd,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <TextInput
+                      value={source}
+                      onChangeText={setSource}
+                      placeholder="Wife / Coach / Friend / Me…"
+                      placeholderTextColor={T.mut}
+                      style={{ color: T.ink, fontWeight: "800" }}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={{ height: 12 }} />
+
+              <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Tags (comma-separated)</Text>
               <View
                 style={{
                   backgroundColor: T.crd,
@@ -829,46 +886,24 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
                 }}
               >
                 <TextInput
-                  value={source}
-                  onChangeText={setSource}
-                  placeholder="Wife / Coach / Friend / Me…"
+                  value={tagsText}
+                  onChangeText={setTagsText}
+                  placeholder="Relationships, Health, Money…"
                   placeholderTextColor={T.mut}
                   style={{ color: T.ink, fontWeight: "800" }}
                 />
               </View>
-            </View>
-          </View>
 
-          <View style={{ height: 12 }} />
+              <View style={{ height: 12 }} />
 
-          <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Tags (comma-separated)</Text>
-          <View
-            style={{
-              backgroundColor: T.crd,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: T.cbd,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-            }}
-          >
-            <TextInput
-              value={tagsText}
-              onChangeText={setTagsText}
-              placeholder="Relationships, Health, Money…"
-              placeholderTextColor={T.mut}
-              style={{ color: T.ink, fontWeight: "800" }}
-            />
-          </View>
-
-          <View style={{ height: 12 }} />
-
-          <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Quick templates</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {templates.map((t) => (
-              <Chip key={t.label} label={t.label} active={false} onPress={t.apply} />
-            ))}
-          </ScrollView>
+              <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Quick templates</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {templates.map((t) => (
+                  <Chip key={t.label} label={t.label} active={false} onPress={t.apply} />
+                ))}
+              </ScrollView>
+            </>
+          ) : null}
 
           <View style={{ height: 16 }} />
 
@@ -1165,7 +1200,7 @@ function ShowUp() {
       <View style={{ flex: 1 }}>
         {content}
 
-        <FloatingAction onPress={() => openComposer(null)} />
+        {tab !== "home" ? <FloatingAction onPress={() => openComposer(null)} /> : null}
 
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
           <TopTabs tab={tab} setTab={setTab} />
@@ -1224,10 +1259,7 @@ function HomeScreen({
       }}
       showsVerticalScrollIndicator={false}
     >
-      <Header
-        title="Today's reminder"
-        subtitle="A quiet vault of life truths — resurfaced daily."
-      />
+      <Header title="Today's reminder" />
 
       <View style={{ paddingHorizontal: 16 }}>
         {spotlight ? (
@@ -1264,8 +1296,12 @@ function HomeScreen({
 
               <View style={{ flexDirection: "row", alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
                 <PriorityPill p={spotlight.priority} />
-                <View style={{ width: 10 }} />
-                <Text style={{ color: T.mut, fontWeight: "800" }}>From {spotlight.source || "Me"}</Text>
+                {spotlight.source && spotlight.source !== "Me" ? (
+                  <>
+                    <View style={{ width: 10 }} />
+                    <Text style={{ color: T.mut, fontWeight: "800" }}>From {spotlight.source}</Text>
+                  </>
+                ) : null}
                 {spotlight.pinned ? <Text style={{ marginLeft: 10, fontWeight: "950" }}>★</Text> : null}
               </View>
 
@@ -1363,6 +1399,38 @@ function HomeScreen({
             </Pressable>
           ) : null}
         </View>
+
+        {!quickText.trim() ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 10 }}
+          >
+            {[
+              "Remember to...",
+              "Rule: never...",
+              "When I feel...",
+              "Always ask...",
+              "Before I react...",
+            ].map((p) => (
+              <Pressable
+                key={p}
+                onPress={() => { setQuickText(p); quickRef.current?.focus(); }}
+                style={{
+                  backgroundColor: T.crd,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: T.cbd,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  marginRight: 8,
+                }}
+              >
+                <Text style={{ color: T.sub, fontWeight: "800", fontSize: 13 }}>{p}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
 
         <View style={{ height: 24 }} />
 
