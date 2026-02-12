@@ -755,7 +755,7 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
     <Sheet visible={visible} onClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16 }}>
-          <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 10 }}>
+          <Text style={{ color: T.ink, fontWeight: "800", fontSize: 18, marginBottom: 12 }}>
             {initial?.id ? "Edit" : "Capture a thought"}
           </Text>
 
@@ -776,19 +776,19 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
               borderRadius: 22,
               borderWidth: 1,
               borderColor: T.cbd,
-              padding: 14,
+              padding: 16,
             }}
           >
             <TextInput
-              placeholder="A truth you don’t want to forget…"
+              placeholder="A truth you don't want to forget…"
               placeholderTextColor={T.mut}
               value={title}
               onChangeText={setTitle}
               style={{
                 color: T.ink,
                 fontSize: 17,
-                fontWeight: "900",
-                paddingVertical: 8,
+                fontWeight: "700",
+                paddingVertical: 6,
               }}
               returnKeyType="next"
             />
@@ -803,80 +803,60 @@ function ComposerSheet({ visible, onClose, initial, onSave }) {
                 color: T.sub,
                 fontSize: 15,
                 lineHeight: 21,
-                minHeight: 92,
-                paddingVertical: 8,
+                minHeight: 72,
+                paddingVertical: 6,
               }}
             />
           </View>
 
           <View style={{ height: 12 }} />
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Priority</Text>
-              <Segmented
-                value={priority}
-                onChange={setPriority}
-                options={[
-                  { value: "low", label: "Low" },
-                  { value: "med", label: "Med" },
-                  { value: "high", label: "High" },
-                ]}
-              />
-            </View>
-          </View>
-
-          <View style={{ height: 12 }} />
-
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>From someone</Text>
-              <View
-                style={{
-                  backgroundColor: T.crd,
-                  borderRadius: 18,
-                  borderWidth: 1,
-                  borderColor: T.cbd,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                }}
-              >
-                <TextInput
-                  value={source}
-                  onChangeText={setSource}
-                  placeholder="Wife / Coach / Friend / Me…"
-                  placeholderTextColor={T.mut}
-                  style={{ color: T.ink, fontWeight: "800" }}
-                />
-              </View>
-            </View>
-          </View>
-
-          <View style={{ height: 12 }} />
-
-          <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Tags (comma-separated)</Text>
           <View
             style={{
               backgroundColor: T.crd,
-              borderRadius: 18,
+              borderRadius: 22,
               borderWidth: 1,
               borderColor: T.cbd,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              padding: 16,
             }}
           >
+            <Text style={{ color: T.sub, fontWeight: "700", fontSize: 13, marginBottom: 8 }}>Priority</Text>
+            <Segmented
+              value={priority}
+              onChange={setPriority}
+              options={[
+                { value: "low", label: "Low" },
+                { value: "med", label: "Med" },
+                { value: "high", label: "High" },
+              ]}
+            />
+
+            <View style={{ height: 1, backgroundColor: T.div, marginVertical: 14 }} />
+
+            <Text style={{ color: T.sub, fontWeight: "700", fontSize: 13, marginBottom: 6 }}>Source</Text>
+            <TextInput
+              value={source}
+              onChangeText={setSource}
+              placeholder="Me, Wife, Coach, Friend…"
+              placeholderTextColor={T.mut}
+              style={{ color: T.ink, fontWeight: "600", fontSize: 15, paddingVertical: 4 }}
+            />
+
+            <View style={{ height: 1, backgroundColor: T.div, marginVertical: 14 }} />
+
+            <Text style={{ color: T.sub, fontWeight: "700", fontSize: 13, marginBottom: 6 }}>Tags (comma-separated)</Text>
             <TextInput
               value={tagsText}
               onChangeText={setTagsText}
               placeholder="Relationships, Health, Money…"
               placeholderTextColor={T.mut}
-              style={{ color: T.ink, fontWeight: "800" }}
+              style={{ color: T.ink, fontWeight: "600", fontSize: 15, paddingVertical: 4 }}
             />
           </View>
 
           <View style={{ height: 12 }} />
 
-          <Text style={{ color: T.mut, fontWeight: "900", marginBottom: 8 }}>Quick templates</Text>
+          <Text style={{ color: T.sub, fontWeight: "700", fontSize: 13, marginBottom: 8 }}>Quick templates</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {templates.map((t) => (
               <Chip key={t.label} label={t.label} active={false} onPress={t.apply} />
