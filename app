@@ -13,6 +13,7 @@ import {
   StatusBar,
   Animated,
   Easing,
+  Image,
 } from "react-native";
 
 // Optional AsyncStorage (recommended)
@@ -147,7 +148,6 @@ function seededInitialData() {
     daily: {
       dayKey: null,
       spotlightId: null,
-      moreIds: [],
       habitIds: [],
     },
   };
@@ -238,21 +238,14 @@ function computeDailyPicks(allItems, settings, dayKeyStr) {
     return true;
   });
 
-  // Sticky pinned: if user has “hold spotlight” pins, show one until unpinned (optional behavior)
+  // Sticky pinned: if user has "hold spotlight" pins, show one until unpinned (optional behavior)
   if (settings?.preferStickyPinned) {
     const stickies = eligible
       .filter((x) => x.pinned && x.stickyPin)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     if (stickies.length) {
-      const spotlight = stickies[0];
-      const remaining = eligible.filter((x) => x.id !== spotlight.id);
-      const weightedRemaining = remaining
-        .map((x) => ({ ...x, _w: weightFor(x, dayKeyStr) }))
-        .sort((a, b) => b._w - a._w);
-
       return {
-        spotlightId: spotlight.id,
-        moreIds: weightedRemaining.slice(0, 3).map((x) => x.id),
+        spotlightId: stickies[0].id,
         habitIds: computeHabitPicks(habits, dayKeyStr),
       };
     }
@@ -261,13 +254,8 @@ function computeDailyPicks(allItems, settings, dayKeyStr) {
   const weighted = eligible.map((x) => ({ ...x, _w: weightFor(x, dayKeyStr) }));
   const spotlight = weighted.length ? pickWeighted(weighted) : null;
 
-  const rest = weighted
-    .filter((x) => x.id !== spotlight?.id)
-    .sort((a, b) => b._w - a._w);
-
   return {
     spotlightId: spotlight?.id || null,
-    moreIds: rest.slice(0, 3).map((x) => x.id),
     habitIds: computeHabitPicks(habits, dayKeyStr),
   };
 }
@@ -370,7 +358,7 @@ function FloatingAction({ onPress }) {
       style={{
         position: "absolute",
         right: 16,
-        bottom: 18,
+        bottom: 80,
         backgroundColor: T.ink,
         borderRadius: 999,
         paddingHorizontal: 16,
@@ -638,9 +626,9 @@ function DetailSheet({
   item,
   onEdit,
   onTogglePin,
-  onToggleStickyPin,
   onToggleTopRule,
   onSnooze,
+  onDelete,
 }) {
   if (!item) return null;
   const title = item.title?.trim();
@@ -698,22 +686,21 @@ function DetailSheet({
           <IconButton label={item.pinned ? "Unpin ★" : "Pin ★"} onPress={onTogglePin} tone="neutral" />
           {item.kind === "reminder" ? (
             <IconButton
-              label={item.stickyPin ? "Unstick" : "Stick to Spotlight"}
-              onPress={onToggleStickyPin}
-              tone={item.stickyPin ? "primary" : "neutral"}
-            />
-          ) : null}
-          {item.kind === "reminder" ? (
-            <IconButton
               label={item.topRule ? "Remove from Top 3 ✦" : "Add to Top 3 ✦"}
               onPress={onToggleTopRule}
               tone={item.topRule ? "primary" : "neutral"}
             />
           ) : null}
+        </View>
+
+        <SoftDivider />
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {item.kind === "reminder" ? (
             <IconButton label="Snooze 1 day" onPress={() => onSnooze(1)} tone="neutral" />
           ) : null}
           <IconButton label="Edit" onPress={onEdit} tone="primary" />
+          <IconButton label="Delete" onPress={onDelete} tone="bad" />
         </View>
 
         <View style={{ height: 24 }} />
@@ -1010,15 +997,6 @@ function ShowUp() {
   }, [state.items]);
 
   const spotlight = state.daily?.spotlightId ? byId.get(state.daily.spotlightId) : null;
-  const more = (state.daily?.moreIds || []).map((id) => byId.get(id)).filter(Boolean);
-  const habitPicks = (state.daily?.habitIds || []).map((id) => byId.get(id)).filter(Boolean);
-
-  const top3 = useMemo(() => {
-    return state.items
-      .filter((x) => x.kind === "reminder" && x.topRule)
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-      .slice(0, 3);
-  }, [state.items]);
 
   const openComposer = (initial = null) => {
     setComposerInitial(initial);
@@ -1127,6 +1105,15 @@ function ShowUp() {
     setState((s) => ({ ...s, daily: { ...s.daily, dayKey: null } }));
   };
 
+  const deleteItem = (id) => {
+    setState((s) => ({
+      ...s,
+      items: s.items.filter((it) => it.id !== id),
+      daily: { ...s.daily, dayKey: null },
+    }));
+    setDetailOpen(false);
+  };
+
   const reflect = (id) => {
     const dk = todayKey();
     setState((s) => ({
@@ -1148,15 +1135,12 @@ function ShowUp() {
     tab === "home" ? (
       <HomeScreen
         spotlight={spotlight}
-        more={more}
-        habitPicks={habitPicks}
-        top3={top3}
         onOpen={openDetail}
         onCapture={() => openComposer(null)}
+        onQuickAdd={(text) => upsertItem({ title: text })}
         onReflect={() => spotlight?.id && reflect(spotlight.id)}
         onSnooze={() => spotlight?.id && snooze(spotlight.id, 1)}
         onPin={() => spotlight?.id && togglePin(spotlight.id)}
-        onEdit={() => spotlight && openComposer(spotlight)}
         refPulse={refPulse}
       />
     ) : tab === "library" ? (
@@ -1204,9 +1188,9 @@ function ShowUp() {
             openComposer(detailItem);
           }}
           onTogglePin={() => detailItem && togglePin(detailItem.id)}
-          onToggleStickyPin={() => detailItem && toggleStickyPin(detailItem.id)}
           onToggleTopRule={() => detailItem && toggleTopRule(detailItem.id)}
           onSnooze={(d) => detailItem && snooze(detailItem.id, d)}
+          onDelete={() => detailItem && deleteItem(detailItem.id)}
         />
       </View>
     </Safe>
@@ -1215,17 +1199,24 @@ function ShowUp() {
 
 function HomeScreen({
   spotlight,
-  more,
-  habitPicks,
-  top3,
   onOpen,
   onCapture,
+  onQuickAdd,
   onReflect,
   onSnooze,
   onPin,
-  onEdit,
   refPulse,
 }) {
+  const [quickText, setQuickText] = useState("");
+  const quickRef = useRef(null);
+
+  const handleQuickAdd = () => {
+    const t = quickText.trim();
+    if (!t) return;
+    onQuickAdd(t);
+    setQuickText("");
+  };
+
   return (
     <ScrollView
       contentContainerStyle={{
@@ -1234,31 +1225,16 @@ function HomeScreen({
       showsVerticalScrollIndicator={false}
     >
       <Header
-        title="Today’s reminder"
+        title="Today's reminder"
         subtitle="A quiet vault of life truths — resurfaced daily."
-        right={
-          <Pressable
-            onPress={onCapture}
-            style={{
-              backgroundColor: T.crd,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: T.cbd,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              alignSelf: "flex-start",
-            }}
-          >
-            <Text style={{ color: T.ink, fontWeight: "900" }}>Capture a thought</Text>
-          </Pressable>
-        }
       />
 
       <View style={{ paddingHorizontal: 16 }}>
         {spotlight ? (
           <View style={{ position: "relative" }}>
             <ReflectPulse trigger={refPulse} />
-            <View
+            <Pressable
+              onPress={() => onOpen(spotlight.id)}
               style={{
                 backgroundColor: T.crd,
                 borderRadius: 26,
@@ -1321,9 +1297,8 @@ function HomeScreen({
                 <IconButton label="I reflected on this" onPress={onReflect} tone="good" />
                 <IconButton label="Snooze" onPress={onSnooze} tone="neutral" />
                 <IconButton label={spotlight.pinned ? "Unpin" : "Pin"} onPress={onPin} tone="neutral" />
-                <IconButton label="Edit" onPress={onEdit} tone="primary" />
               </View>
-            </View>
+            </Pressable>
           </View>
         ) : (
           <View
@@ -1344,73 +1319,60 @@ function HomeScreen({
           </View>
         )}
 
-        {top3?.length ? (
-          <>
-            <View style={{ height: 16 }} />
-            <Text style={{ color: T.mut, fontWeight: "950", marginBottom: 10 }}>Top 3 Rules</Text>
-            {top3.map((it) => (
-              <Pressable
-                key={it.id}
-                onPress={() => onOpen(it.id)}
-                style={{
-                  backgroundColor: "#F3F1ED",
-                  borderRadius: 18,
-                  borderWidth: 1,
-                  borderColor: "#E6E2DB",
-                  padding: 14,
-                  marginBottom: 10,
-                }}
-              >
-                <Text style={{ color: T.ink, fontWeight: "950" }}>✦ {it.title}</Text>
-                <Text style={{ color: T.sub, marginTop: 6 }} numberOfLines={2}>
-                  {it.body || " "}
-                </Text>
-              </Pressable>
-            ))}
-          </>
-        ) : null}
-
         <View style={{ height: 18 }} />
-        <Text style={{ color: T.mut, fontWeight: "950", marginBottom: 10 }}>More reminders today</Text>
-        {more.length ? (
-          more.map((it) => (
-            <ReminderCard key={it.id} item={it} onOpen={() => onOpen(it.id)} />
-          ))
-        ) : (
-          <View style={{ paddingVertical: 10 }}>
-            <Text style={{ color: T.mut, fontWeight: "800" }}>No extras today — keep it calm.</Text>
-          </View>
-        )}
 
-        {habitPicks?.length ? (
-          <>
-            <View style={{ height: 10 }} />
-            <Text style={{ color: T.mut, fontWeight: "950", marginBottom: 10 }}>
-              Habits to remember
-            </Text>
-            {habitPicks.map((h) => (
-              <Pressable
-                key={h.id}
-                onPress={() => onOpen(h.id)}
-                style={{
-                  backgroundColor: T.crd,
-                  borderRadius: 18,
-                  borderWidth: 1,
-                  borderColor: T.cbd,
-                  padding: 14,
-                  marginBottom: 10,
-                }}
-              >
-                <Text style={{ color: T.ink, fontWeight: "950" }}>{h.title}</Text>
-                <Text style={{ color: T.mut, fontWeight: "800", marginTop: 6 }}>
-                  Tap to edit — no streaks, no guilt.
-                </Text>
-              </Pressable>
-            ))}
-          </>
-        ) : null}
+        <View
+          style={{
+            backgroundColor: T.crd,
+            borderRadius: 22,
+            borderWidth: 1,
+            borderColor: T.cbd,
+            padding: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <TextInput
+            ref={quickRef}
+            value={quickText}
+            onChangeText={setQuickText}
+            placeholder="Type a thought..."
+            placeholderTextColor={T.mut}
+            onSubmitEditing={handleQuickAdd}
+            returnKeyType="done"
+            style={{
+              flex: 1,
+              color: T.ink,
+              fontSize: 16,
+              fontWeight: "800",
+              paddingVertical: 6,
+            }}
+          />
+          {quickText.trim() ? (
+            <Pressable
+              onPress={handleQuickAdd}
+              style={{
+                backgroundColor: T.ink,
+                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ color: T.crd, fontWeight: "900", fontSize: 13 }}>Add</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         <View style={{ height: 24 }} />
+
+        <View style={{ alignItems: "center", marginTop: 8, marginBottom: 24 }}>
+          <Image
+            source={require("./assets/mascot.png")}
+            style={{ width: 120, height: 120, opacity: 0.5 }}
+            resizeMode="contain"
+          />
+        </View>
       </View>
     </ScrollView>
   );
@@ -1430,6 +1392,7 @@ function LibraryScreen({ items, onOpen, onCapture }) {
     if (filter === "pinned") xs = xs.filter((x) => x.pinned);
     if (filter === "high") xs = xs.filter((x) => x.priority === "high");
     if (filter === "wife") xs = xs.filter((x) => (x.source || "").toLowerCase() === "wife");
+    if (filter === "top3") xs = xs.filter((x) => x.topRule);
     if (filter === "recent") xs = xs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     if (qq) {
@@ -1490,6 +1453,7 @@ function LibraryScreen({ items, onOpen, onCapture }) {
               <Chip label="Pinned" active={filter === "pinned"} onPress={() => setFilter("pinned")} />
               <Chip label="High" active={filter === "high"} onPress={() => setFilter("high")} />
               {hasWife ? <Chip label="From Wife" active={filter === "wife"} onPress={() => setFilter("wife")} /> : null}
+              <Chip label="Top 3 ✦" active={filter === "top3"} onPress={() => setFilter("top3")} />
               <Chip label="Recent" active={filter === "recent"} onPress={() => setFilter("recent")} />
             </ScrollView>
           </View>
